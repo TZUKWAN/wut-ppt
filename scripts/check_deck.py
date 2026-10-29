@@ -18,14 +18,15 @@ import sys
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATE = os.path.join(BASE, "assets", "template.pptx")
 
-# 设计调色板（与 build_deck.py 设计常量一致）
+# 设计调色板（与 references/design_rules.md 一致）
 PALETTE = {
-    "00469A", "003371", "3D6FB0",  # 主蓝/深蓝/浅蓝(连接线)
+    "00469A", "003371", "3D6FB0",  # 主蓝/深蓝/连接蓝
+    "0B5CAD", "2E6DC4", "7BA3D8",  # 信息图层次蓝
     "FBC540", "9A7300",            # 金黄/深金
     "C00000",                      # 强调红
     "262626", "595959",            # 正文/辅助灰
-    "FFFFFF", "F4F7FB", "EAF1F9",  # 白/卡片底/标签底
-    "D9D9D9", "DCE6F5",            # 细线/横幅副行
+    "FFFFFF", "F4F7FB", "EAF1F9",  # 白/浅底/标签底
+    "D9D9D9", "DCE6F5",            # 细线/淡蓝
 }
 
 DIRTY_MARKERS = [

@@ -1,143 +1,107 @@
-# 大纲 JSON 契约（build_deck.py 输入格式）
+# 固定结构配置、正文视觉地图与 SVG 契约
 
-> 生成 PPT 的唯一输入。先按本契约写 JSON，再执行 `python scripts/build_deck.py 大纲.json 输出.pptx`。
+## 一、项目结构
 
-## 顶层结构
+```text
+design_spec.md       正文内容、逐页设计和全稿正文视觉地图
+spec_lock.md         颜色、字体、页面节奏和结构锁
+deck.json            固定封面、汇报人、章节和正文页标题
+svg_output/          AI 逐页手写的正文 SVG（唯一正文视觉源）
+notes/total.md       可选演讲备注
+images/              模板及项目图片资源
+validation/          技术报告和 deck_visual_map.md
+```
+
+## 二、固定结构配置 deck.json
 
 ```json
 {
   "title": "封面主标题",
-  "speaker": "汇报人姓名（封面副标题）",
+  "speaker": "汇报人",
   "chapters": [
-    {"name": "章节名（目录、章节页自动加“一、二、三”）",
-     "pages": [{"title": "页面标题（红色页标题）", "zones": [ ... zone 列表 ... ]}]}
-  ],
-  "closing": {"line1": "以上汇报，敬请批评指正", "line2": "汇报人：XXX　YYYY年M月"}
+    {"name": "第一章名称", "pages": [
+      {"title": "正文页标题"},
+      {"title": "下一页标题"}
+    ]}
+  ]
 }
 ```
 
-- 封面、目录、章节页、封底**自动生成**，不用写 zones；只写正文页的 zones。
-- 目录最多 5 章，超出忽略；不足 5 章自动删掉多余槽位。
+- 最多五章，固定封面、目录和章节页由模板自动生成。
+- 所有章节的 `pages` 顺序必须与 `svg_output/NN_*.svg` 完全一致。
+- 不得在 `deck.json` 中配置自定义封面、底版或结构页版式。
 
-## 正文页 = zones 垂直流
+## 三、每个正文页必填字段
 
-每页正文是若干 zone **从上到下堆叠**，引擎按内容估高后把剩余空间分配给可伸展 zone，**自动填满整页**（详见 design_rules.md）。zone 之间的垂直间距固定 0.14in。
-
-## 文字标记语法（所有文本通用）
-
-- `**文字**` → 蓝色加粗（强调概念、关键词）
-- `[[文字]]` → 红色加粗（仅关键数字、结论）
-- 要点写作范式：`{"lead": "四字引导语", "text": "完整解释句"}`，引导语自动蓝粗加冒号
-
-## Zone 目录（12 种）
-
-### `lead` 导语段 —— 页首一段完整判断
-```json
-{"type": "lead", "text": "平台自**5月27日**上线以来……一段完整话。"}
+```markdown
+#### Slide 01 - 页面短名
+- **Audience move**: 受众看完应理解或接受什么
+- **Composition**: 正文主构图、阅读顺序、图文比例
+- **Title**: 正文页标题（与 deck.json 一致）
+- **Core message**: 本页唯一核心判断
+- **Relationships**: 层级/顺序/汇聚/交叠/反馈/支撑等真实关系
+- **Layout ID**: L01（全稿唯一）
+- **Geometry signature**: 页面任务 → 宏观构图 → 阅读方向 → 视觉中心 → 渲染语言（全稿唯一）
+- **Macro composition**: composition_library.md 中的 ID 或 custom-具体名称（全稿唯一）
+- **Reading direction**: 例如自上而下 / 中心向四周
+- **Visual center**: 页面第一视觉落点
+- **Rendering language**: admin-editorial / data-journalism / engineering-blueprint 等
+- **Distinction**: 与此前所有正文页在宏观构图上的本质区别
+- **Arrow semantics**: 使用箭头时必填“来源→目标＋交接/映射/转化/支撑语义”
+- **Content**: 呈现在正文区的最终内容，而非写作提示
 ```
-适用：现状页、背景页开头。蓝竖线 + 13pt 整段文字。
 
-### `cards` 列卡片 —— 最常用，多维并列
-```json
-{"type": "cards", "cards": [
-  {"head": "平台功能端", "items": [
-    {"lead": "标签数据不足", "text": "画像主要来自注册信息，缺乏多维采集……"},
-    "纯文本要点也行，但不推荐（少了引导语）"
-  ]}
-]}
+- 换内容、颜色、图标、节点数不能作为 `Distinction`。
+- 任何箭头，包括原生箭头预设，都必须填写 `Arrow semantics`；没有箭头可不填。
+- 表格、泳道没有真实交接或映射时，不得使用箭头。
+- 页面节奏只用 dense，不得设置 breathing 正文页。
+
+## 四、正文 SVG 基本要求
+
+```xml
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720"
+     data-pptx-page-role="content"
+     font-family="Microsoft YaHei, Arial, sans-serif">
+  <g id="main-diagram" data-pptx-bounds="40 76 1200 612">
+    <!-- 在整个正文安全区展开主图、关系线、节点和说明 -->
+  </g>
+</svg>
 ```
-- 2–4 列。每列：蓝色圆角列头 + **每个要点一张独立卡**（序号圆徽 + 引导语 + 解释）。
-- 卡片自动均分列高填满页面。适用：问题诊断、目标并列、措施并列。
 
-### `flow_chain` 箭头链 —— 递进逻辑
-```json
-{"type": "flow_chain", "items": [
-  {"label": "建成·四功能上线", "text": "有 text 时下方对齐详情卡"},
-  {"label": "阶段二　创新伙伴"}
-]}
+- 正文安全区：`x=40–1240，y=76–688`。
+- 不得包含封面、目录、章节页、页标题、底部蓝条、校徽或整页品牌背景。
+- 每个逻辑模块有唯一语义 `id` 和正数 `data-pptx-bounds`。
+- 任何显式 `font-size` 不小于 16px。
+- 每页至少 10 个文本信息单元、18 个可见图形元素；不得以无意义形状凑数。
+- 禁止 `<style>`、`class`、`foreignObject`、`textPath`、脚本、动画和外部 CSS。
+
+## 五、全页填满与箭头语义
+
+- 内容必须铺展到正文区四边，禁止留下连续空白区域。
+- 通过真实子要点、解释、任务、指标、交付物和输入输出补足，不得只拉大容器。
+- 箭头只能用于真实递进、映射、交接、转化、支撑或反馈。
+- 表格以网格和单元格内容为主；没有业务交接时不画箭头。
+- 中心圆、环形图和泳道不能成为信息稀薄的默认答案。
+
+## 六、换行与可编辑性
+
+同一逻辑段落使用一个 `<text>`，后续行使用相同 `x` 和正数 `dy`：
+
+```xml
+<text x="730" y="100" font-size="20" fill="#262626">第一行完整表述，
+  <tspan x="730" dy="30">第二行继续表述，</tspan>
+  <tspan x="730" dy="30">第三行结束表述。</tspan>
+</text>
 ```
-- CHEVRON 箭头依次咬合，表先后顺序。`text` 可省略（纯链条，常用于页首阶段导航）。
-- 5 节时末节自动红色收尾。适用：演进链、阶段链、逻辑递进。
 
-### `timeline` 时间轴 —— 分阶段安排
-```json
-{"type": "timeline", "phases": [
-  {"month": "7月", "theme": "搭架构、定规则", "tasks": ["任务一句……", "……"]}
-]}
-```
-- 最多 3–4 个节点：节点圆（蓝/金/红）+ 主题 + 连接线，下方每条任务一张卡。
-- 适用：月度/季度推进计划、阶段安排。
+- 行距通常 28–32px（20px 正文）。
+- 非定位 `<tspan>` 可用于同一句内强调。
+- 窄形状不要硬塞长词；需要竖排时逐字分行。
+- 导出器不会替 AI 自动换行或缩小文字。
 
-### `compare_rows` 对象行 —— 多维映射关系
-```json
-{"type": "compare_rows", "heads": ["激励对象", "赋分维度", "配套激励"],
- "rows": [{"label": "学生", "mid": "维度内容……", "right": "措施内容……"}]}
-```
-- 平行四边形标签 + 左卡 + 金箭头 + 右卡。适用：四类对象激励、输入→输出、问题→对策。
+## 七、完成定义
 
-### `badge_grid` 徽章网格 —— 清单式亮点
-```json
-{"type": "badge_grid", "cols": 3, "items": [
-  {"badge": "1", "title": "建设手机端", "text": "满足便携使用需求……"}
-]}
-```
-- N×M 圆角卡，序号圆徽 + 标题 + 解释。适用：六项优化、八大行动、亮点清单。
-
-### `shape_row` 形状横排 —— 组织/角色并列
-```json
-{"type": "shape_row", "label": "下设五个工作组", "shape": "hexagon",
- "items": [{"name": "综合协调组", "text": "整体推进·跨部门对接"}]}
-```
-- shape 可选 `hexagon/oval/pentagon/chevron/parallelogram`，形状间自动加连接线。`label`、`text` 可省。
-- 适用：工作组、五类用户、角色分工（3–6 个）。
-
-### `chips` 标签组 —— 小签 + 说明
-```json
-{"type": "chips", "label": "六项配套制度", "items": ["平台管理", "项目运行"],
- "text": "可选的补充说明段……"}
-```
-- 六边形小签横排。适用：制度清单、关键词罗列 + 一段解释。
-
-### `banner` 横幅 —— 页首主题
-```json
-{"type": "banner", "title": "主题：XX行动——副标题一句话",
- "lines": ["倡导语：……", "定位：……"]}
-```
-- 蓝底金饰横幅。适用：活动总览、工作专班等需要先立主题的页。
-
-### `kv_rows` 键值行 —— 逐条定义
-```json
-{"type": "kv_rows", "rows": [{"label": "建设成效", "text": "……"}]}
-```
-- 蓝标签 + 内容行。适用：2–5 条需要逐条展开的并列项。
-
-### `table` 表格 —— 数据对比
-```json
-{"type": "table", "head": ["列1", "列2"], "widths": [1.6, 5.2], "rows": [["...", "..."]]}
-```
-- 蓝头 + 斑马纹。适用：指标表、数据表。对象映射类优先用 `compare_rows`。
-
-### `note` 结论条 —— 页脚结论（每页建议必有）
-```json
-{"type": "note", "text": "一句话结论/核心逻辑，**关键处**强调。"}
-```
-- 红三角 + 浅蓝底。放在页面最后，收拢全页判断。
-
-## 页面配方（从标杆样例提炼，直接套用）
-
-| 页面类型 | zones 组合 |
-|---|---|
-| 现状判断页 | `lead` + `flow_chain`(带详情) + `chips` + `note` |
-| 问题诊断页 | `cards`(3列) + `note` |
-| 组织+措施页 | `banner` + `shape_row` + `badge_grid` + `note` |
-| 制度激励页 | `chips` + `compare_rows` + `note` |
-| 时间安排页 | `timeline` + `note` |
-| 计划总览页 | `banner` + `cards`(4列) + `note` |
-| 阶段实施页 | `flow_chain`(纯链) + `cards`(4列) + `note` |
-
-## 内容写作要求（密度是硬指标）
-
-- 每个要点 = 引导语（4–6 字）+ 完整解释句（30–65 字），**禁止关键词漂浮**。
-- 每页正文承载 300–600 字；7 页正文覆盖源文档 90% 以上实质内容。
-- 术语、数据必须与源文档一致（见 `references/terminology.md`）。
-- 引号概念词保留（“XX计划”“XX行动”），数据原样呈现（100个、前10%）。
+1. `wut_svg.py check` 通过：规划字段、唯一性、箭头语义、SVG 几何、字号和静态信息密度。
+2. `wut_svg.py export` 完成原生转换、固定模板组装和 PPTX 自检。
+3. `wut_svg.py verify` 通过：PNG 正文横向铺展 ≥90%、纵向 ≥85%，12×6 网格最大连续空白 ≤6 格。
+4. 主 Agent 打开 `contact_sheet.png` 和关键单页，排除近义同构、局部空白、无意义箭头、遮挡和断词。
