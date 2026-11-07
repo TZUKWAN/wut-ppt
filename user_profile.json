@@ -1,0 +1,28 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-11-07 15:57:34",
+  "user_identity": "高校行政核心用户",
+  "style_preferences": {
+    "title_pattern": "严格八字对仗，字数必须绝对对齐",
+    "structure_preference": "严格三点式/四点式闭环，成效与问题、计划1:1呼应",
+    "data_style": "必须呈现增长率与同比数据，弱化单一体量",
+    "tone_rule": "稳妥工整，绝对避讳负面定性与口语词"
+  },
+  "custom_vocabulary_substitutions": {},
+  "banned_phrases_extra": [],
+  "preferred_framework_terms": [
+    "五库五链",
+    "育人智链",
+    "三位一体",
+    "协同升维",
+    "数智赋能"
+  ],
+  "learning_history": [
+    {
+      "time": "2026-11-07 15:57",
+      "type": "verbal_feedback",
+      "raw": "校领导汇报偏好八字对仗金句，成效数据必须突出同比增幅，把数据平台统一称为全域数智中台",
+      "summary": "强化了八字对仗标题要求; 强调了增量与百分比优先的数据表达风格"
+    }
+  ]
+}

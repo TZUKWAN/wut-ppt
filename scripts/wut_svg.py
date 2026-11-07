@@ -51,13 +51,34 @@ def init_project(args: argparse.Namespace) -> None:
     run("project_manager.py", ["scaffold-spec", project])
     run("project_manager.py", ["scaffold-lock", project])
     spec_path = project / "design_spec.md"
+    profile_memo = ""
+    profile_file = BASE / "user_profile.json"
+    if profile_file.is_file():
+        try:
+            p_data = json.loads(profile_file.read_text(encoding="utf-8"))
+            style_p = p_data.get("style_preferences", {})
+            subs = p_data.get("custom_vocabulary_substitutions", {})
+            sub_list = [f"{k}→{v.get('preferred') if isinstance(v, dict) else v}" for k, v in list(subs.items())[:5]]
+            profile_memo = (
+                f"\n> **已加载当前用户专属画像偏好**：\n"
+                f"> - 标题风格：{style_p.get('title_pattern', '八字对仗')}\n"
+                f"> - 结构偏好：{style_p.get('structure_preference', '三点式闭环')}\n"
+                f"> - 数据风格：{style_p.get('data_style', '增量百分比优先')}\n"
+            )
+            if sub_list:
+                profile_memo += f"> - 专属词汇沉淀：{', '.join(sub_list)}\n"
+        except Exception:
+            pass
+
     with spec_path.open("a", encoding="utf-8") as spec:
-        spec.write("""
+        spec.write(f"""
 
-## XI. WUT Deck Visual Map（每个 Slide 块必填）
-
-> 同一套 PPT 中 Layout ID、Geometry signature、Macro composition 均不得重复。
-> 品牌固定元素可以一致，正文宏观构图不得同构。详细选型见 wut-ppt/references/composition_library.md。
+## XI. 高校行政公文内容设计与全稿视觉地图（强制约束）
+{profile_memo}
+> 1. 内容写作严格遵从 `wut-ppt/references/content_writing_guide.md` 五条铁律（工整优先、稳妥优先、结论先行、虚实结合、闭环结构）；
+> 2. 标题优先八字对仗（动宾+动宾），禁中性概况标题；正文三点式/四点式起头（一是/二是/三是）；严禁口语与绝对避讳词；
+> 3. 同一套 PPT 中正文 Layout ID、Geometry signature、Macro composition 均不得重复；正文必须占满，不得留下连续空白；
+> 4. 使用箭头时必须在 Arrow semantics 中说明“来源→目标＋业务语义”；表格无真实交接/映射严禁添加箭头。
 
 每个 `#### Slide NN` 块在 Relationships 后补充：
 
@@ -69,8 +90,6 @@ def init_project(args: argparse.Namespace) -> None:
 - **Rendering language**: 行政编辑 / 数据新闻 / 工程蓝图 / 等距立体等
 - **Distinction**: 与此前所有页面在宏观构图上的本质区别，不得只写换内容、颜色或图标
 - **Arrow semantics**: 使用箭头时必填“来源→目标＋业务语义”；表格无真实交接/映射不得加箭头
-
-正文必须占满固定内容区，不得留下连续空白；每页至少 10 个文本信息单元和 18 个可见图形元素。
 """)
     (project / "deck.json").write_text(
         '{\n  "title": "汇报标题",\n  "speaker": "汇报人",\n'
@@ -108,6 +127,7 @@ def check_project(args: argparse.Namespace) -> None:
             print(f"[ERROR] {error}")
         raise SystemExit(1)
     print("[OK] wut-ppt 字号检查：所有显式 SVG font-size 均不小于 16px（12pt）")
+    subprocess.run([sys.executable, str(BASE / "scripts" / "check_content_compliance.py"), str(project)], check=True)
     subprocess.run([sys.executable, str(BASE / "scripts" / "deck_visual_audit.py"), str(project)], check=True)
     subprocess.run([sys.executable, str(BASE / "scripts" / "check_visual_density.py"), str(project)], check=True)
 
@@ -183,6 +203,15 @@ def main() -> None:
     p_verify = sub.add_parser("verify", help="导出 PNG、全稿总览并检查正文空白区域")
     p_verify.add_argument("project")
     p_verify.set_defaults(func=verify_project)
+    p_feedback = sub.add_parser("feedback", help="录入用户日常习惯与意见，自适应更新偏好")
+    p_feedback.add_argument("text", help="具体修改要求或习惯描述")
+    p_feedback.set_defaults(func=lambda a: subprocess.run([sys.executable, str(BASE / "scripts" / "learn_from_feedback.py"), "feedback", a.text], check=True))
+    p_learn = sub.add_parser("learn", help="比对原 PPTX 与用户手工修改后的 PPTX，自主学习改动规律")
+    p_learn.add_argument("original", help="技能导出的 PPTX 路径")
+    p_learn.add_argument("modified", help="用户手工修改后的 PPTX 路径")
+    p_learn.set_defaults(func=lambda a: subprocess.run([sys.executable, str(BASE / "scripts" / "learn_from_feedback.py"), "diff", a.original, a.modified], check=True))
+    p_profile = sub.add_parser("profile", help="查看当前积累的用户专属画像与进化规则")
+    p_profile.set_defaults(func=lambda a: subprocess.run([sys.executable, str(BASE / "scripts" / "learn_from_feedback.py"), "show"], check=True))
     args = parser.parse_args()
     args.func(args)
 
